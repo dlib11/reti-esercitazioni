@@ -172,7 +172,8 @@ textarea + .fb, .proto-item .fb { max-width: none; }
 
 /* ---------- suggerimenti ---------- */
 .hints { border-color: var(--acc2); }
-.hints-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.hints-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.hints-head h4 { margin: 0; }
 .hint-steps { margin: 8px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; }
 .hint-step .hint-title { font-weight: 600; margin-bottom: 4px; }
 .hint-step .btn { margin-top: 4px; }
@@ -279,7 +280,7 @@ textarea + .fb, .proto-item .fb { max-width: none; }
 .star:hover { color: var(--warn); transform: scale(1.2); }
 .star.on { color: var(--warn); }
 .auto-chip { margin-left: 8px; }
-.lv-sel { width: auto; font-family: inherit; }
+select.cell.lv-sel { width: auto; font-family: inherit; }
 .diff-cards { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 .diff-card { text-align: center; display: flex; flex-direction: column; gap: 8px; margin: 0; }
 .diff-card .btn { margin-top: auto; }

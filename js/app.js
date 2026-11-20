@@ -291,6 +291,7 @@
     // --- aiuti ---
     const hintsCard = U.h('div', { class: 'card hints' + (explainOn() && !c.locked ? '' : ' hidden') });
     v.appendChild(hintsCard);
+    c.hintsCard = hintsCard;
 
     // --- corpo dell'esercizio ---
     const body = U.h('div', { class: 'ex-body' });
@@ -384,11 +385,16 @@
     U.clear(card);
     const hs = c.mod.hints ? c.mod.hints(c.ex) : [];
     if (!hs.length) { card.classList.add('hidden'); return; }
+    const guided = !!c.guideBar;
     card.appendChild(U.h('div', { class: 'hints-head' },
-      U.h('h4', {}, '💡 Suggerimenti passo per passo'),
+      U.h('button', { class: 'btn ghost sm', text: c.hintsOpen ? '▾ Nascondi' : '▸ Mostra', 'aria-expanded': c.hintsOpen ? 'true' : 'false', onclick: () => { c.hintsOpen = !c.hintsOpen; renderHints(card); } }),
+      U.h('h4', {}, guided ? '💡 Suggerimento per il passo corrente' : `💡 Suggerimenti passo per passo (${hs.length} passi)`),
       U.h('span', { class: 'small' }, `Prima la regola, poi la regola con i tuoi numeri, infine il passo svolto. Aiuti usati: ${c.hints}`)));
+    if (!c.hintsOpen) return;
     const list = U.h('ol', { class: 'hint-steps' });
     hs.forEach((h, i) => {
+      // in modalità guidata: solo il suggerimento del passo corrente
+      if (guided && c.steps[c.stepIdx] && h.step && h.step !== c.steps[c.stepIdx].id) return;
       const lvl = c.revealed[i] || 0;
       const li = U.h('li', { class: 'hint-step' + (lvl ? ' open' : '') });
       li.appendChild(U.h('div', { class: 'hint-title' }, h.title));
@@ -449,6 +455,7 @@
       } }),
       cur < steps.length - 1 ? U.h('button', { class: 'btn ghost', text: 'Salta al passo successivo', onclick: () => { c.stepIdx = cur + 1; applyGuided(); } }) : null,
       msg));
+    if (c.hintsCard && explainOn()) renderHints(c.hintsCard);
   }
 
   // ---------------- VERIFICA ----------------

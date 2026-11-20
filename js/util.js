@@ -67,7 +67,8 @@ window.RetiApp = window.RetiApp || {};
     // Le parole chiave corte (< 4 lettere) devono comparire come parola intera:
     // così "ip" non viene trovato dentro "principale" e "as" dentro "base".
     kw(text, groups) {
-      const t = ' ' + U.norm(text).replace(/[^a-z0-9./:-]+/g, ' ') + ' ';
+      // la punteggiatura di fine parola ("porta 53.") non deve impedire il riconoscimento
+      const t = ' ' + U.norm(text).replace(/[^a-z0-9./:-]+/g, ' ').replace(/[.:-]+(?=\s|$)/g, ' ') + ' ';
       const found = [], missing = [];
       groups.forEach((g, i) => {
         const list = Array.isArray(g) ? g : g.any;
@@ -182,8 +183,8 @@ window.RetiApp = window.RetiApp || {};
       return U.h('div', { class: 'fig-wrap' }, U.h('div', { html: svg }), caption ? U.h('p', { class: 'fig-cap small' }, caption) : null);
     },
     // marker per le frecce SVG (da mettere in <defs>); id unico per figura
-    svgArrowDefs(id) {
-      return `<defs><marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker></defs>`;
+    svgArrowDefs(id, cls) {
+      return `<defs><marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="${cls || 'ah'}"/></marker></defs>`;
     },
 
     // ---- risposte ----
