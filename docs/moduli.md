@@ -23,17 +23,19 @@ L'app (`js/app.js`) non conosce i dettagli dei singoli esercizi: usa solo le fun
 | `extra` | booleano | `true` se non fa parte dei 6 esercizi d'esame |
 | `method` | oggetto | scheda "📘 Metodo": `{ intro, steps: [testo], traps: [testo], formulas: [[etichetta, valore]] }` |
 | `traces` | array | tracce fisse: `[{ id, title, source, params, expect }]` (vedi sotto) |
+| `options` | array | facoltativo: interruttori `[{ key, label, title }]` mostrati nell'intestazione dell'esercizio (vedi sotto) |
 
 ## Funzioni
 
-### `randomParams(level) → params`
+### `randomParams(level, opts) → params`
 Sceglie a caso i parametri per il livello 1-5. Ogni livello deve essere davvero diverso dal precedente.
+`opts` (facoltativo) contiene le opzioni scelte dall'utente, per esempio `{ routerInHosts: true }`: chi le usa le copia in `params`, così `build` resta deterministica.
 
 ### `build(params) → ex`
 Costruisce l'esercizio e la sua soluzione. `ex` contiene almeno `cat` (= id), `level`, `params`.
 
-### `gen(level) → ex`
-Sempre `build(randomParams(level))`.
+### `gen(level, opts) → ex`
+Sempre `build(randomParams(level, opts))`.
 
 ### `steps(ex) → [{ id, title, keys: [chiave], prefixes: [prefisso] }]`
 I passi del metodo, nell'ordine in cui si risolve l'esercizio. Ogni chiave di `sol2answers(ex)` deve appartenere a un passo (per elenco in `keys` o per prefisso in `prefixes`, utile per le righe aggiunte dall'utente). La modalità guidata sblocca un passo alla volta.
@@ -74,6 +76,18 @@ Errori tipici costruiti apposta: `diagnose(ex, key, value, …)` deve contenere 
 
 ### `chatText(ex, answers) → stringa`
 Testo dell'esercizio con le risposte dell'utente (i campi vuoti come `__`), da incollare in chat.
+
+## Opzioni
+
+```js
+options: [{ key: 'routerInHosts', label: 'Router compreso negli host', title: 'spiegazione nel tooltip' }]
+```
+
+- Ogni opzione è un booleano in `params[key]` (assente = spenta). `build` la legge da lì.
+- L'app la mostra come interruttore nell'intestazione dell'esercizio e ricorda la scelta per tipo di esercizio (`RA.storage.getOptions(cat)`), passandola a `gen` e agli esami simulati.
+- Cambiarla ricostruisce subito l'esercizio aperto (`build` con gli stessi `params` e l'opzione cambiata), tenendo le risposte scritte.
+- Le tracce fisse partono con le opzioni spente, salvo che i loro `params` dicano altro.
+- L'autotest ripete la generazione con ogni opzione accesa.
 
 ## Tracce fisse
 

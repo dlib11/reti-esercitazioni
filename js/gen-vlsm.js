@@ -13,6 +13,16 @@
   const EXT_IP = U.ip2int('8.8.8.8');
   const P2 = n => Math.pow(2, n);
 
+  // convenzione del testo: il router è già contato tra gli host? (params.routerInHosts)
+  const rIn = ex => !!(ex.params && ex.params.routerInHosts);
+  const extraOf = ex => rIn(ex) ? 2 : 3;
+  // calcolo degli indirizzi necessari di una sottorete, come testo
+  function needTxt(ex, n) {
+    if (n.kind !== 'lan') return '2 + 2 = 4';
+    return rIn(ex) ? `${n.hosts} + 2 = ${ex.need[n.name]} (router già compreso negli host)` : `${n.hosts} + 1 + 2 = ${ex.need[n.name]}`;
+  }
+  const needRule = ex => rIn(ex) ? 'host (router compreso) + 2 (rete e broadcast)' : 'host + 1 (router) + 2 (rete e broadcast)';
+
   function linksOf(topo) {
     const L = [{ name: 'Link_1', a: 'R1', b: 'R2' }, { name: 'Link_2', a: 'R2', b: 'R3' }, { name: 'Link_3', a: 'R1', b: 'R3' }];
     return topo === 'chain' ? L.slice(0, 2) : L;
@@ -121,8 +131,10 @@
   }
 
   // ---------------- parametri ----------------
-  function tryParams(level) {
+  function tryParams(level, opts) {
     const L = level;
+    const routerInHosts = !!(opts && opts.routerInHosts);
+    const E = routerInHosts ? 2 : 3; // indirizzi oltre agli host
     let topo = 'triangle';
     if (L <= 3 && U.chance([0, 0.5, 0.4, 0.25][L])) topo = 'chain';
     const nL = topo === 'chain' ? 3 : (L === 4 ? 4 : L === 5 ? (U.chance(0.5) ? 4 : 3) : 3);
@@ -136,11 +148,11 @@
     const total = U.sum(sizes) + 4 * nLinks;
     if (total > space || total / space < fill[0] || total / space > fill[1]) return null;
     if (L <= 2 && new Set(sizes).size < nL) return null;
-    // host: indirizzi necessari (host + 3) tra metà blocco (esclusa) e blocco
-    const hosts = sizes.map(s => U.rndInt(s / 2 - 2, s - 3));
+    // host: indirizzi necessari (host + E) tra metà blocco (esclusa) e blocco
+    const hosts = sizes.map(s => U.rndInt(s / 2 - E + 1, s - E));
     const big = sizes.indexOf(Math.max(...sizes));
-    if (L === 5) hosts[big] = U.chance(0.6) ? sizes[big] / 2 - 2 : sizes[big] - 3; // caso al limite
-    else if (L >= 3 && U.chance(0.3)) hosts[big] = sizes[big] / 2 - 2;
+    if (L === 5) hosts[big] = U.chance(0.6) ? sizes[big] / 2 - E + 1 : sizes[big] - E; // caso al limite
+    else if (L >= 3 && U.chance(0.3)) hosts[big] = sizes[big] / 2 - E + 1;
 
     const last = U.rndInt(0, 256 / space - 1) * space;
     const net = [U.pick(FIRST_OCT), U.rndInt(1, 254), U.rndInt(0, 255), last].join('.');
@@ -168,15 +180,19 @@
       const d = U.pick(ends.filter(e => e.r !== s.r && !(e.id === 'Internet' && s.id === 'Internet')));
       q3 = { src: s.id, dst: d.id };
     }
-    return { level: L, net, prefix, topo, border, lans, asked, q3, askCost: L >= 3 };
+    const p = { level: L, net, prefix, topo, border, lans, asked, q3, askCost: L >= 3 };
+    if (routerInHosts) p.routerInHosts = true;
+    return p;
   }
 
-  function randomParams(level) {
+  function randomParams(level, opts) {
     for (let i = 0; i < 4000; i++) {
-      const p = tryParams(level);
+      const p = tryParams(level, opts);
       if (p) return p;
     }
-    return U.clone(TRACES[0].params);
+    const p = U.clone(TRACES[0].params);
+    if (opts && opts.routerInHosts) p.routerInHosts = true;
+    return p;
   }
 
   // ---------------- costruzione ----------------
@@ -187,8 +203,9 @@
     const nets = p.lans.map(l => ({ name: l.name, kind: 'lan', hosts: l.hosts, routers: [l.router] }))
       .concat(links.map(l => ({ name: l.name, kind: 'link', routers: [l.a, l.b] })));
     const need = {}, size = {}, pf = {};
+    const E = p.routerInHosts ? 2 : 3;
     nets.forEach(n => {
-      need[n.name] = n.kind === 'lan' ? n.hosts + 3 : 4;
+      need[n.name] = n.kind === 'lan' ? n.hosts + E : 4;
       size[n.name] = Math.max(4, U.pow2ceil(need[n.name]));
       pf[n.name] = 32 - Math.log2(size[n.name]);
     });
@@ -251,7 +268,7 @@
     return ex;
   }
   function netKind(nets, name) { return nets.find(n => n.name === name).kind; }
-  const gen = level => build(randomParams(level));
+  const gen = (level, opts) => build(randomParams(level, opts));
 
   // ---------------- passi ----------------
   function steps(ex) {
@@ -440,7 +457,9 @@
       total++;
       const ok = U.numEq(a[k], ex.need[n.name]);
       if (ok) correct++;
-      marks[k] = { ok, msg: n.kind === 'lan' ? `${n.name}: ${n.hosts} host + 1 (interfaccia del router) + 2 (rete e broadcast) = ${ex.need[n.name]}` : `${n.name}: 2 interfacce (una per router) + 2 (rete e broadcast) = 4` };
+      marks[k] = { ok, msg: n.kind === 'lan'
+        ? (rIn(ex) ? `${n.name}: ${n.hosts} host (il router è già compreso) + 2 (rete e broadcast) = ${ex.need[n.name]}` : `${n.name}: ${n.hosts} host + 1 (interfaccia del router) + 2 (rete e broadcast) = ${ex.need[n.name]}`)
+        : `${n.name}: 2 interfacce (una per router) + 2 (rete e broadcast) = 4` };
     });
 
     // 2. rete/prefisso
@@ -636,6 +655,13 @@
         return null;
       }
       const h = n.hosts;
+      if (rIn(ex)) {
+        if (x === h + 3) return 'Hai contato il router due volte: qui il testo lo comprende già negli host. Aggiungi solo rete e broadcast (+2).';
+        if (x === h + 1) return 'Manca un indirizzo riservato: rete e broadcast sono due (+2).';
+        if (x === h) return 'Hai contato solo gli host (router compreso): aggiungi 2 per rete e broadcast.';
+        if (x === ex.size[n.name] && x !== ex.need[n.name]) return 'Questo è già il blocco arrotondato alla potenza di 2: qui scrivi gli indirizzi necessari (host + 2), l\'arrotondamento è il passo dopo.';
+        return null;
+      }
       if (x === h + 2) return 'Hai dimenticato il +1 del router: anche l\'interfaccia del router sulla LAN prende un indirizzo (è il default gateway degli host).';
       if (x === h + 1) return 'Mancano rete e broadcast: i due indirizzi riservati di ogni sottorete non si assegnano a nessuno (+2).';
       if (x === h) return 'Hai contato solo gli host: aggiungi 1 per il router e 2 per rete e broadcast.';
@@ -653,7 +679,7 @@
           case 'out': return `Fuori dallo spazio assegnato: tutto deve stare tra ${U.int2ip(ex.start)} e ${U.int2ip(ex.start + ex.space - 1)}.`;
           case 'align': return `Rete non allineata: un blocco da ${r.size} può partire solo da un multiplo di ${r.size} (nell'ultimo ottetto: ${multiples(r.size)}).`;
           case 'small': {
-            const lim = netByName(ex, name).kind === 'lan' && need - 1 <= r.size ? ' Senza il +1 del router ci starebbe: è proprio il caso al limite.' : '';
+            const lim = netByName(ex, name).kind === 'lan' && !rIn(ex) && need - 1 <= r.size ? ' Senza il +1 del router ci starebbe: è proprio il caso al limite.' : '';
             return `Un /${r.p.n} ha ${r.size} indirizzi, meno dei ${need} necessari: serve un /${ex.pf[name]} (${ex.size[name]}).` + lim;
           }
           case 'big': return `Blocco troppo grande: un /${r.p.n} ha ${r.size} indirizzi, ma ne bastano ${ex.size[name]} (/${ex.pf[name]}). Si spreca spazio e alla fine le altre reti non ci stanno.`;
@@ -767,8 +793,13 @@
     const sol = sol2answers(ex);
     const out = [];
     const lan = ex.nets.find(n => n.kind === 'lan');
-    out.push({ key: 'need.' + lan.name, value: String(lan.hosts + 2), expect: '+1 del router' });
-    out.push({ key: 'need.' + lan.name, value: String(lan.hosts + 1), expect: 'rete e broadcast' });
+    if (rIn(ex)) {
+      out.push({ key: 'need.' + lan.name, value: String(lan.hosts + 3), expect: 'router due volte' });
+      out.push({ key: 'need.' + lan.name, value: String(lan.hosts), expect: 'rete e broadcast' });
+    } else {
+      out.push({ key: 'need.' + lan.name, value: String(lan.hosts + 2), expect: '+1 del router' });
+      out.push({ key: 'need.' + lan.name, value: String(lan.hosts + 1), expect: 'rete e broadcast' });
+    }
     const bigLan = ex.nets.filter(n => n.kind === 'lan').sort((a, b) => ex.size[b.name] - ex.size[a.name])[0];
     const bs = ex.sub[bigLan.name];
     out.push({ key: `sub.${bigLan.name}.pf`, value: U.fmtPrefix(bs.net, bs.pf + 1), expect: 'meno dei' });
@@ -815,9 +846,11 @@
     return [
       {
         step: 'need', title: 'Quanti indirizzi servono a ogni sottorete',
-        metodo: 'Per ogni LAN: host + 1 (l\'interfaccia del router, che è il default gateway) + 2 (rete e broadcast). Per ogni link tra router: 2 interfacce + 2 = 4. Il +1 del router è l\'errore più frequente.',
-        applicato: `Spazio: ${spaceTxt(ex)}. LAN: ${lans.map(n => `${n.name} ${n.hosts} host`).join(', ')}. Link: ${ex.links.map(l => l.name).join(', ')}.`,
-        svolto: ex.nets.map(n => n.kind === 'lan' ? `${n.name}: ${n.hosts} + 1 + 2 = ${ex.need[n.name]}` : `${n.name}: 2 + 2 = 4`).join('\n')
+        metodo: rIn(ex)
+          ? 'Qui il testo conta già il router tra gli host: per ogni LAN host + 2 (rete e broadcast). Per ogni link tra router: 2 interfacce + 2 = 4. Attento a non aggiungere il router una seconda volta.'
+          : 'Per ogni LAN: host + 1 (l\'interfaccia del router, che è il default gateway) + 2 (rete e broadcast). Per ogni link tra router: 2 interfacce + 2 = 4. Il +1 del router è l\'errore più frequente.',
+        applicato: `Spazio: ${spaceTxt(ex)}. LAN: ${lans.map(n => `${n.name} ${n.hosts} host`).join(', ')}${rIn(ex) ? ' (router compreso)' : ''}. Link: ${ex.links.map(l => l.name).join(', ')}.`,
+        svolto: ex.nets.map(n => `${n.name}: ${needTxt(ex, n)}`).join('\n')
       },
       {
         step: 'pf', title: 'Blocchi e assegnazione',
@@ -859,6 +892,7 @@
     const X = ex.asked;
     if ((m = /^need\.(.+)$/.exec(key))) {
       const n = netByName(ex, m[1]);
+      if (n.kind === 'lan' && rIn(ex)) return `${n.name} ha ${n.hosts} host, router già compreso: aggiungi solo i due indirizzi riservati.`;
       return n.kind === 'lan' ? `${n.name} ha ${n.hosts} host: aggiungi l'interfaccia del router e i due indirizzi riservati.` : 'Link punto-punto: quante interfacce ci sono? Poi aggiungi rete e broadcast.';
     }
     if ((m = /^sub\.(.+)\.(pf|mask|first|last|bcast)$/.exec(key))) {
@@ -969,6 +1003,7 @@
     const X = ex.asked;
     return `Alla tua organizzazione è assegnato lo spazio ${U.fmtPrefix(ex.start, ex.prefix)}. La figura mostra la struttura interna: ${ex.border} è il router di bordo, collegato a Internet (l'indirizzo verso il provider lo assegna il provider e non fa parte dello spazio). ` +
       `Link punto-punto: ${ex.links.map(l => `${l.name} (${l.a}–${l.b})`).join(', ')}. LAN: ${ex.lans.map(l => `${l.name} ${l.hosts} host su ${l.router}`).join(', ')}.` +
+      (rIn(ex) ? ' Il numero di host di ogni LAN comprende già l\'interfaccia del router.' : '') +
       (X === ex.border ? ` Nella tabella di ${X} la default va al provider: come next-hop scrivi «ISP».` : '');
   }
 
@@ -992,7 +1027,7 @@
         U.inp(ctx, b + 'bcast', { w: 'm', label: `broadcast ${n.name}` })];
     });
     root.appendChild(U.card('i. Schema di indirizzamento', { step: 'need' },
-      U.h('p', { class: 'small' }, `Spazio ${U.fmtPrefix(ex.start, ex.prefix)}. Indirizzi necessari: per una LAN host + router + rete e broadcast; per un link le 2 interfacce + rete e broadcast.`),
+      U.h('p', { class: 'small' }, `Spazio ${U.fmtPrefix(ex.start, ex.prefix)}. Indirizzi necessari: per una LAN ${rIn(ex) ? 'host (router compreso) + rete e broadcast' : 'host + router + rete e broadcast'}; per un link le 2 interfacce + rete e broadcast.`),
       U.table(['Sottorete', 'Host', 'Indirizzi necessari', 'Rete/prefisso', 'Maschera', 'Primo utile', 'Ultimo utile', 'Broadcast'], rows)));
 
     // interfacce
@@ -1040,9 +1075,9 @@
     const P = (...k) => card.appendChild(U.h('p', { class: 'sol-body' }, ...k));
 
     P(U.h('b', {}, '1. Spazio. '), spaceTxt(ex) + '.');
-    P(U.h('b', {}, '2. Indirizzi necessari e blocchi. '), 'LAN: host + 1 (router) + 2 (rete e broadcast); link: 2 + 2 = 4. Si arrotonda alla potenza di 2 superiore.');
+    P(U.h('b', {}, '2. Indirizzi necessari e blocchi. '), `LAN: ${needRule(ex)}; link: 2 + 2 = 4. Si arrotonda alla potenza di 2 superiore.`);
     card.appendChild(U.table(['Sottorete', 'Calcolo', 'Blocco', 'Prefisso', 'Perché non il blocco più piccolo'],
-      ex.nets.map(n => [n.name, n.kind === 'lan' ? `${n.hosts} + 1 + 2 = ${ex.need[n.name]}` : '2 + 2 = 4', String(ex.size[n.name]), '/' + ex.pf[n.name],
+      ex.nets.map(n => [n.name, needTxt(ex, n), String(ex.size[n.name]), '/' + ex.pf[n.name],
         n.kind === 'lan' ? `un /${ex.pf[n.name] + 1} ha ${ex.size[n.name] / 2} indirizzi < ${ex.need[n.name]}` : 'è già il minimo con 2 interfacce'])));
     P(U.h('b', {}, '3. Ci sta? '), `${blocksSum(ex)} ≤ ${ex.space}: ci sta` + (ex.used < ex.space ? `, avanzano ${ex.space - ex.used} indirizzi.` : ', senza avanzi: lo spazio è usato tutto.'));
     P(U.h('b', {}, '4. Assegnazione in ordine decrescente. '), 'Ogni blocco deve partire da un multiplo della sua dimensione. Mettendo prima i più grandi, la fine di ogni blocco è già un multiplo valido per quelli più piccoli che seguono: niente buchi.');
@@ -1106,7 +1141,7 @@
     L.push('(i) Sottoreti:');
     ex.nets.forEach(n => {
       const b = `sub.${n.name}.`;
-      L.push(`- ${n.name}${n.kind === 'lan' ? ` (${n.hosts} host)` : ` (${n.routers.join('–')})`}: necessari ${v('need.' + n.name)} | ${v(b + 'pf')} | maschera ${v(b + 'mask')} | utili ${v(b + 'first')} – ${v(b + 'last')} | broadcast ${v(b + 'bcast')}`);
+      L.push(`- ${n.name}${n.kind === 'lan' ? ` (${n.hosts} host${rIn(ex) ? ', router compreso' : ''})` : ` (${n.routers.join('–')})`}: necessari ${v('need.' + n.name)} | ${v(b + 'pf')} | maschera ${v(b + 'mask')} | utili ${v(b + 'first')} – ${v(b + 'last')} | broadcast ${v(b + 'bcast')}`);
     });
     L.push('(i) Interfacce:');
     ex.routers.forEach(R => L.push(`- ${R}: ` + netsOfRouter(ex, R).map(n => `${n} ${v(`if.${R}.${n}`)}`).join(', ')));
@@ -1181,6 +1216,7 @@
       ],
       traps: [
         'Dimenticare il +1 del router: nei casi al limite (62 host in un /26) la rete non ci sta più.',
+        'Leggi bene il testo: se dice che il numero di host comprende già il router, si aggiunge solo +2 (rete e broadcast). Contarlo due volte può far scattare il blocco successivo.',
         'Assegnare prima i blocchi piccoli: il blocco grande deve saltare al multiplo successivo e si sprecano indirizzi.',
         'Broadcast sbagliato di uno: rete + blocco è già la rete successiva.',
         'Next-hop sbagliato: non l\'IP del router stesso, non un IP qualsiasi del vicino, ma quello sul link condiviso (l\'ARP funziona solo nella stessa sottorete).',
@@ -1198,11 +1234,13 @@
         ['/30', '255.255.255.252 · 4 · 2 (link punto-punto)'],
         ['Maschera', 'nell\'ottetto del confine: 256 − blocco'],
         ['Broadcast', 'rete + blocco − 1 · la rete successiva parte da broadcast + 1'],
-        ['Necessari', 'LAN: host + 1 + 2 · link: 2 + 2 = 4'],
+        ['Necessari', 'LAN: host + 1 + 2 (router compreso negli host: host + 2) · link: 2 + 2 = 4'],
         ['Routing', 'longest prefix match · connesse: «direttamente connessa» · remote: IP del vicino sul link condiviso · default 0.0.0.0/0 verso il bordo · pareggio: uno o entrambi']
       ]
     },
     traces: TRACES,
+    options: [{ key: 'routerInHosts', label: 'Router compreso negli host',
+      title: 'Attivo: il numero di host di ogni LAN comprende già l\'interfaccia del router (necessari = host + 2). Spento: il router si aggiunge (host + 1 + 2). Vale anche per l\'esercizio aperto.' }],
     randomParams, build, gen, steps, grade, sol2answers, render, solution, hints, fieldHint, diagnose, diagnoseCases, chatText
   };
 })();

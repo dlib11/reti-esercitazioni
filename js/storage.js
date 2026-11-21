@@ -22,6 +22,7 @@
     d.stats = d.stats || {};
     d.exams = d.exams || [];
     d.history = d.history || [];
+    d.options = d.options || {};
     return d;
   }
   function load() {
@@ -75,6 +76,10 @@
     stats() { return load().stats; },
     setMode(m) { const d = load(); d.mode = m; save(d); },
     getMode() { return load().mode || 'aiuti'; },
+
+    // ---- opzioni dei moduli (mod.options), per esercizio: { routerInHosts: true } ----
+    getOptions(cat) { return Object.assign({}, load().options[cat] || {}); },
+    setOption(cat, key, val) { const d = load(); d.options[cat] = Object.assign({}, d.options[cat], { [key]: val }); save(d); },
 
     // ---- esami simulati ----
     recordExam(res) {

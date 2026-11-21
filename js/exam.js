@@ -26,7 +26,7 @@
 
   function startLevel(lv) {
     RA.storage.setAllLevels(lv, RA.app.order);
-    start(RA.app.order.map(k => ({ key: k, ex: RA[k].gen(lv) })), `livello ${lv}`);
+    start(RA.app.order.map(k => ({ key: k, ex: RA[k].gen(lv, RA.storage.getOptions(k)) })), `livello ${lv}`);
   }
 
   // esame con le tracce fisse del PDF (set "simulato")
@@ -37,7 +37,7 @@
     const ts = simTraces();
     const items = RA.app.order.map(k => {
       const t = ts.find(x => x.cat === k);
-      return t ? { key: k, ex: RA[k].build(U.clone(t.params)), traceId: t.id } : { key: k, ex: RA[k].gen(3) };
+      return t ? { key: k, ex: RA[k].build(U.clone(t.params)), traceId: t.id } : { key: k, ex: RA[k].gen(3, RA.storage.getOptions(k)) };
     });
     start(items, 'esame simulato del PDF');
   }

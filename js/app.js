@@ -240,7 +240,7 @@
   function startEx(key, lvOverride) {
     const mod = RA[key];
     const lv = lvOverride || RA.storage.getLevel(key);
-    open(key, mod.gen(lv), { source: 'gen' });
+    open(key, mod.gen(lv, RA.storage.getOptions(key)), { source: 'gen' });
   }
   function startTrace(id) {
     const t = findTrace(id);
@@ -275,12 +275,31 @@
       U.h('option', { value: 'auto' }, 'Prossimo: auto (adattivo)')) : null;
     if (lvSel) lvSel.value = RA.storage.isFixed(c.key) ? String(RA.storage.getLevel(c.key)) : 'auto';
 
+    // opzioni del modulo (mod.options): interruttori che cambiano anche l'esercizio aperto
+    const optNodes = (mod.options || []).map(o => {
+      const on = !!(ex.params && ex.params[o.key]);
+      if (c.locked) return on ? U.h('span', { class: 'chip static' }, o.label) : null;
+      const box = U.h('input', { type: 'checkbox', role: 'switch', 'aria-label': o.label });
+      box.checked = on;
+      box.addEventListener('change', () => {
+        RA.storage.setOption(c.key, o.key, box.checked);
+        c.answers = U.collect(c.ctx.fields);
+        const p = U.clone(ex.params);
+        if (box.checked) p[o.key] = true; else delete p[o.key];
+        c.ex = mod.build(p);
+        c.lastRes = null; c.revealed = {};
+        renderEx();
+      });
+      return U.h('label', { class: 'switch', title: o.title || '' }, box, U.h('span', { class: 'switch-track' }), U.h('span', {}, o.label));
+    });
+
     const trace = c.traceId ? findTrace(c.traceId) : null;
     v.appendChild(U.h('div', { class: 'ex-head' },
       U.h('h2', {}, `${mod.num} · ${mod.name}`),
       U.h('span', { class: 'chip static' }, trace ? '📄 ' + trace.title : `livello ${ex.level}/5`),
       c.locked ? U.h('span', { class: 'chip static' }, '👁 revisione') : U.h('span', { class: 'chip static' }, MODES.find(m => m[0] === app.mode)[1].toLowerCase()),
       lvSel,
+      ...optNodes,
       mod.method ? U.h('button', { class: 'btn ghost sm', text: '📘 Metodo', onclick: () => {
         const p = v.querySelector('.method-panel');
         if (p) p.classList.toggle('hidden');

@@ -43,6 +43,20 @@
       }
       const variety = [1, 2, 3, 4, 5].map(lv => sigs[lv].size).join('/');
       info.push(`${id}: ${count} esercizi controllati · soluzioni diverse per livello: ${variety}`);
+      // opzioni del modulo: ogni interruttore acceso deve dare esercizi validi
+      (mod.options || []).forEach(o => {
+        let cnt = 0;
+        for (let lv = 1; lv <= 5; lv++) {
+          for (let i = 0; i < Math.max(1, Math.ceil(N / 3)); i++) {
+            let ex;
+            try { ex = mod.gen(lv, { [o.key]: true }); } catch (e) { err(id, `gen(${lv}, ${o.key}) lancia: ${e.stack || e}`); break; }
+            if (!ex.params || ex.params[o.key] !== true) err(id, `gen(${lv}, ${o.key}): l'opzione non finisce nei params`);
+            checkEx(id, mod, ex, `livello ${lv} con ${o.key}`, err);
+            cnt++;
+          }
+        }
+        info.push(`${id}: ${cnt} esercizi controllati con l'opzione ${o.key}`);
+      });
       (mod.traces || []).forEach(t => {
         let ex;
         try { ex = mod.build(U.clone(t.params)); } catch (e) { err(id, `traccia ${t.id}: build lancia ${e.stack || e}`); return; }
