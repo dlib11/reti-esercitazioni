@@ -76,6 +76,8 @@
     stats() { return load().stats; },
     setMode(m) { const d = load(); d.mode = m; save(d); },
     getMode() { return load().mode || 'aiuti'; },
+    setPart(n) { const d = load(); d.part = n; save(d); },
+    getPart() { return load().part || 1; },
 
     // ---- opzioni dei moduli (mod.options), per esercizio: { routerInHosts: true } ----
     getOptions(cat) { return Object.assign({}, load().options[cat] || {}); },

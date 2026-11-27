@@ -21,6 +21,7 @@ L'app (`js/app.js`) non conosce i dettagli dei singoli esercizi: usa solo le fun
 | `desc` | stringa | una riga per la card della home |
 | `examPoints` | numero | punti all'esame (0 per gli extra) |
 | `extra` | booleano | `true` se non fa parte dei 6 esercizi d'esame |
+| `part` | numero | parte dell'esame (1 o 2; se manca vale 1). L'elenco degli esercizi di ogni parte è in `PARTS` di `js/app.js` |
 | `method` | oggetto | scheda "📘 Metodo": `{ intro, steps: [testo], traps: [testo], formulas: [[etichetta, valore]] }` |
 | `traces` | array | tracce fisse: `[{ id, title, source, params, expect }]` (vedi sotto) |
 | `options` | array | facoltativo: interruttori `[{ key, label, title }]` mostrati nell'intestazione dell'esercizio (vedi sotto) |

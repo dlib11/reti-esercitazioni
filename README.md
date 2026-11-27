@@ -1,6 +1,6 @@
-# Esercitazioni · Reti di calcolatori — Prima parte
+# Esercitazioni · Reti di calcolatori — Prima e seconda parte
 
-App locale per esercitarti con gli esercizi della prima parte dell'esame.
+App locale per esercitarti con gli esercizi delle due parti dell'esame (si sceglie la parte con le schede in cima alla home).
 Funziona offline, nessuna installazione: **doppio clic su `index.html`** e si apre nel browser.
 
 ## Cosa contiene
@@ -16,6 +16,19 @@ I 6 tipi di esercizio dell'esame, generati con **numeri e situazioni sempre nuov
 
 In più, dalle guide: **finestra di congestione TCP** (Reno) e **domande di teoria** a risposta chiusa.
 
+### Seconda parte
+
+1. **ARP, switch e VLAN** (10 punti) — ping in sequenza: frame ARP e ICMP con MAC e IP, flooding/inoltro/filtering degli switch, router fra le VLAN, tabelle per self-learning, ping impossibili. Simulatore che segue le logiche host/switch/router del corso.
+2. **Connettività e subnet mask** (4 punti) — due host su un cavo: reti diverse, nuovo IP per B, maschera accorciata del minimo numero di bit.
+3. **Routing: Distance Vector e Dijkstra** (6 punti) — vettore iniziale, dopo un'iterazione e finale con next-hop, tabella di Dijkstra, poisoned reverse e count-to-infinity.
+4. **Crittografia: RSA, firma e PGP** (6 punti) — n, z, d, cifratura e decifratura, firma RSA, blocchi dello schema PGP e passi del destinatario, hash e CA.
+5. **SSL/TLS e firewall** (5 punti) — campi del record (cifrati o no, chiavi, livello), handshake TLS in ordine, ACL di un firewall stateless, IPsec.
+6. **Accesso multiplo e rilevazione errori** (4 punti) — CRC, parità a una e due dimensioni, backoff di CSMA/CD, efficienza, ALOHA, CSMA/CA e RTS/CTS.
+
+Più le **domande di teoria della seconda parte** (banca a risposta chiusa su link layer, accesso multiplo, routing, wireless e mobilità, sicurezza, e le domande aperte del secondo parziale valutate a parole chiave).
+
+Le guide in PDF della seconda parte, con l'esame simulato (testo e soluzioni), sono in `../../riassunti esercizi 2 parte/`; gli esercizi di quei PDF sono anche tra le tracce d'esame del sito.
+
 ## Come si usa
 
 - **Tre modalità** (in alto a destra):
@@ -26,7 +39,7 @@ In più, dalle guide: **finestra di congestione TCP** (Reno) e **domande di teor
 - **📖 Soluzione**: la soluzione con tutti i passaggi (se la apri prima di verificare, l'esercizio non conta per il livello).
 - **📝 Chiedi correzione in chat**: prepara il testo dell'esercizio con le tue risposte (i campi vuoti come "__") da incollare in chat.
 - **Difficoltà**: clicca le stelle (1–5) di una categoria per bloccarne il livello, oppure **AUTO** per farla adattare da sola (sale sopra 85%, scende sotto 50%).
-- **🏁 Esame simulato**: i 6 esercizi con timer di 2 ore e punteggio come all'esame (35 punti). Niente aiuti durante la prova; alla consegna (o allo scadere del tempo) vedi punteggio e correzione di ogni esercizio. C'è anche la versione con gli esercizi del PDF dell'esame simulato.
+- **🏁 Esame simulato**: i 6 esercizi della parte scelta con timer di 2 ore e punteggio come all'esame (35 punti). Niente aiuti durante la prova; alla consegna (o allo scadere del tempo) vedi punteggio e correzione di ogni esercizio. C'è anche la versione con gli esercizi del PDF dell'esame simulato.
 - **📄 Tracce d'esame**: gli esercizi dell'esame simulato e gli esempi svolti delle guide, con gli stessi numeri del foglio.
 - **📚 Storico e ripasso**: ogni esercizio verificato viene salvato con le tue risposte. Puoi rivederlo, rifarlo uguale e ripassare quelli andati male (sotto l'85%, con la soluzione aperta o con molti aiuti).
 - **💾 Backup**: i progressi stanno nel browser. *Esporta* scarica un file `.json`; *Importa* lo ricarica (anche su un altro computer o browser).
