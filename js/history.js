@@ -15,7 +15,7 @@
     window.scrollTo(0, 0);
     RA.app.current = null;
     const all = S.history().slice().reverse();
-    const cats = RA.app.order.concat(RA.app.extras).filter(k => RA[k]);
+    const cats = RA.app.allCats();
 
     view.appendChild(U.h('div', { class: 'ex-head' }, U.h('h2', {}, '📚 Storico e ripasso')));
     view.appendChild(U.h('p', { class: 'small' }, 'Ogni esercizio verificato viene salvato con le tue risposte. "Da ripassare" = sotto l\'85%, oppure con la soluzione aperta o più di 2 aiuti, e non ancora rifatto bene.'));

@@ -15,7 +15,7 @@ const n = Number(opt('n', 60));
 const ctx = { window: {}, console, Math, JSON, Date };
 ctx.window.window = ctx.window;
 vm.createContext(ctx);
-const files = ['util.js', 'gen-vlsm.js', 'gen-protocols.js', 'gen-nat.js', 'gen-tcp.js', 'gen-sdn.js', 'gen-http.js', 'gen-cwnd.js', 'gen-theory.js', 'selftest.js'];
+const files = ['util.js', 'gen-vlsm.js', 'gen-protocols.js', 'gen-nat.js', 'gen-tcp.js', 'gen-sdn.js', 'gen-http.js', 'gen-cwnd.js', 'gen-theory.js', 'gen-l2.js', 'gen-subnet.js', 'gen-dv.js', 'gen-crypto.js', 'gen-tls.js', 'gen-mac.js', 'gen-theory2.js', 'selftest.js'];
 for (const f of files) {
   const p = path.join(root, 'js', f);
   if (!fs.existsSync(p)) { console.log(`(manca js/${f}: saltato)`); continue; }

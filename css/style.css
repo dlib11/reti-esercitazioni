@@ -78,7 +78,7 @@ code { background: var(--bg); padding: 1px 5px; border-radius: 5px; font-size: .
 .home-foot { margin-top: 22px; text-align: center; }
 .trace-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .trace-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg2); }
-.trace-title { flex: 1; }
+.trace-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .src-line { margin-top: -4px; }
 
 /* ---------- pulsanti ---------- */
@@ -189,6 +189,17 @@ textarea + .fb, .proto-item .fb { max-width: none; }
 .guide-msg { margin-left: 6px; }
 .card-locked { opacity: .45; }
 .card-current { border-color: var(--acc2); }
+
+/* ---------- scelta della parte ---------- */
+.part-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin: 12px 0 6px; }
+.part-tab {
+  display: flex; flex-direction: column; gap: 3px; text-align: left; cursor: pointer; font-family: inherit;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; color: var(--txt);
+}
+.part-tab b { font-size: 1.02rem; }
+.part-tab:hover { border-color: var(--acc); }
+.part-tab.on { border-color: var(--acc); background: var(--card2); box-shadow: inset 0 -3px 0 var(--acc); }
+.part-tab:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }
 
 /* ---------- metodo ---------- */
 .method ol, .method ul { margin: 4px 0 10px; padding-left: 22px; }

@@ -12,13 +12,35 @@
     ['guidata', 'Guidata', 'un passo alla volta, nell\'ordine del metodo']
   ];
 
+  // le due parti dell'esame: ogni parte ha i suoi 6 esercizi, gli extra e il suo esame simulato
+  const PARTS = {
+    1: {
+      label: 'Prima parte', order: ['vlsm', 'protocols', 'nat', 'tcp', 'sdn', 'http'], extras: ['cwnd', 'theory'],
+      sub: 'Indirizzamento e routing, protocolli, NAT, TCP, SDN, HTTP',
+      pdf: 'Esame_Simulato_TESTO.pdf'
+    },
+    2: {
+      label: 'Seconda parte', order: ['l2', 'subnet', 'dv', 'crypto', 'tls', 'mac'], extras: ['theory2'],
+      sub: 'ARP, switch e VLAN, subnet mask, routing DV e Dijkstra, crittografia, SSL/TLS e firewall, accesso multiplo',
+      pdf: 'Esame_Simulato_2_TESTO.pdf'
+    }
+  };
+  const partOf = k => (RA[k] && RA[k].part) || 1;
   const app = {
-    order: ['vlsm', 'protocols', 'nat', 'tcp', 'sdn', 'http'],
-    extras: ['cwnd', 'theory'],
+    PARTS,
+    part: PARTS[RA.storage.getPart()] ? RA.storage.getPart() : 1,
     mode: RA.storage.getMode(),
     current: null
   };
+  app.order = PARTS[app.part].order;
+  app.extras = PARTS[app.part].extras;
   RA.app = app;
+  function setPart(n) {
+    if (!PARTS[n]) return;
+    app.part = n; app.order = PARTS[n].order; app.extras = PARTS[n].extras;
+    RA.storage.setPart(n);
+  }
+  const allCats = () => Object.values(PARTS).flatMap(P => P.order.concat(P.extras)).filter(k => RA[k]);
 
   const view = () => document.getElementById('view');
   const mods = list => list.filter(k => RA[k]);
@@ -55,9 +77,14 @@
     window.scrollTo(0, 0);
     const stats = RA.storage.stats();
 
+    const P = PARTS[app.part];
     v.appendChild(U.h('div', { class: 'home-head' },
       U.h('h1', {}, 'Reti di calcolatori · Esercitazioni'),
-      U.h('p', { class: 'sub' }, 'Prima parte · esercizi come all\'esame, con numeri sempre nuovi · difficoltà progressiva')));
+      U.h('div', { class: 'part-tabs', role: 'tablist' }, Object.keys(PARTS).map(n => U.h('button', {
+        class: 'part-tab' + (Number(n) === app.part ? ' on' : ''), role: 'tab', 'aria-selected': Number(n) === app.part ? 'true' : 'false',
+        onclick: () => { setPart(Number(n)); home(); }
+      }, U.h('b', {}, PARTS[n].label), U.h('span', { class: 'small' }, PARTS[n].sub)))),
+      U.h('p', { class: 'sub' }, `${P.label} · esercizi come all'esame, con numeri sempre nuovi · difficoltà progressiva`)));
 
     const warn = RA.storage.takeWarning();
     if (warn) v.appendChild(U.h('div', { class: 'card warn-card' }, warn));
@@ -112,21 +139,21 @@
     }
 
     // esame simulato
-    const exams = RA.storage.exams();
+    const exams = RA.storage.exams().filter(e => (e.part || 1) === app.part);
     v.appendChild(U.h('div', { class: 'card exam-card' },
-      U.h('h3', {}, '🏁 Esame simulato'),
-      U.h('p', { class: 'small' }, 'I 6 esercizi in sequenza: Indirizzamento (10) · Protocolli (4) · NAT (5) · TCP (5) · SDN (4) · HTTP (7). Timer di 2 ore, nessun aiuto: la correzione arriva alla consegna.'),
+      U.h('h3', {}, `🏁 Esame simulato · ${P.label.toLowerCase()}`),
+      U.h('p', { class: 'small' }, `I ${mods(app.order).length} esercizi in sequenza: ${mods(app.order).map(k => `${RA[k].name} (${RA[k].examPoints})`).join(' · ')}. Timer di 2 ore, nessun aiuto: la correzione arriva alla consegna.`),
       U.h('div', { class: 'btn-bar tight' },
         U.h('button', { class: 'btn primary', text: 'Scegli la difficoltà e inizia →', onclick: () => RA.exam.showChoice() })),
       exams.length ? U.h('div', { class: 'small' },
         'Ultimi esami: ' + exams.slice(-3).reverse().map(e => `${new Date(e.date).toLocaleDateString('it-IT')} → ${e.tot}/${e.totMax}${e.label ? ' (' + e.label + ')' : ''}`).join(' · ')) : null));
 
     // tracce d'esame
-    const traces = allTraces();
+    const traces = allTraces().filter(t => partOf(t.cat) === app.part);
     if (traces.length) {
       v.appendChild(U.h('div', { class: 'card' },
         U.h('h3', {}, '📄 Tracce d\'esame dalle guide'),
-        U.h('p', { class: 'small' }, 'Esercizi fissi presi dai PDF delle guide e dall\'esame simulato: stessi numeri del foglio, così puoi confrontarti con la soluzione scritta.'),
+        U.h('p', { class: 'small' }, `Esercizi fissi presi dai PDF (guide, esame simulato${app.part === 2 ? ', esercizi e domande del secondo parziale' : ''}): stessi numeri del foglio, così puoi confrontarti con la soluzione scritta.`),
         U.h('div', { class: 'trace-list' }, traces.map(t => U.h('div', { class: 'trace-item' },
           U.h('span', { class: 'cat-num sm' }, RA[t.cat].num),
           U.h('span', { class: 'trace-title' }, t.title, U.h('span', { class: 'small' }, ' · ' + t.source)),
@@ -217,7 +244,7 @@
   // ---------------- AVVIO ESERCIZIO ----------------
   function allTraces() {
     const out = [];
-    mods(app.order.concat(app.extras)).forEach(k => (RA[k].traces || []).forEach(t => out.push(Object.assign({ cat: k }, t))));
+    allCats().forEach(k => (RA[k].traces || []).forEach(t => out.push(Object.assign({ cat: k }, t))));
     return out;
   }
   function findTrace(id) { return allTraces().find(t => t.id === id) || null; }
@@ -239,12 +266,14 @@
   }
   function startEx(key, lvOverride) {
     const mod = RA[key];
+    if (partOf(key) !== app.part) setPart(partOf(key));
     const lv = lvOverride || RA.storage.getLevel(key);
     open(key, mod.gen(lv), { source: 'gen' });
   }
   function startTrace(id) {
     const t = findTrace(id);
     if (!t) return;
+    if (partOf(t.cat) !== app.part) setPart(partOf(t.cat));
     open(t.cat, RA[t.cat].build(U.clone(t.params)), { source: 'trace', traceId: id });
   }
 
@@ -563,5 +592,5 @@
   });
 
   // API usata da exam.js e history.js
-  Object.assign(app, { home, startEx, startTrace, open, findTrace, allTraces, explainOn, renderModeToggle, fmtNum });
+  Object.assign(app, { home, startEx, startTrace, open, findTrace, allTraces, explainOn, renderModeToggle, fmtNum, setPart, allCats, partOf });
 })();

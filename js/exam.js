@@ -16,7 +16,7 @@
   function start(items, label) {
     stopTimer();
     state = {
-      label,
+      label, part: RA.app.part,
       exs: items.map(it => ({ key: it.key, mod: RA[it.key], ex: it.ex, traceId: it.traceId || null, answers: {}, ctx: null })),
       idx: 0, start: Date.now(), finished: false, results: null
     };
@@ -26,12 +26,12 @@
 
   function startLevel(lv) {
     RA.storage.setAllLevels(lv, RA.app.order);
-    start(RA.app.order.map(k => ({ key: k, ex: RA[k].gen(lv) })), `livello ${lv}`);
+    start(RA.app.order.map(k => ({ key: k, ex: RA[k].gen(lv) })), `${RA.app.PARTS[RA.app.part].label.toLowerCase()} · livello ${lv}`);
   }
 
   // esame con le tracce fisse del PDF (set "simulato")
   function simTraces() {
-    return RA.app.allTraces().filter(t => t.set === 'simulato');
+    return RA.app.allTraces().filter(t => t.set === 'simulato' && RA.app.partOf(t.cat) === RA.app.part);
   }
   function startPdf() {
     const ts = simTraces();
@@ -39,7 +39,7 @@
       const t = ts.find(x => x.cat === k);
       return t ? { key: k, ex: RA[k].build(U.clone(t.params)), traceId: t.id } : { key: k, ex: RA[k].gen(3) };
     });
-    start(items, 'esame simulato del PDF');
+    start(items, `${RA.app.PARTS[RA.app.part].label.toLowerCase()} · esame simulato del PDF`);
   }
 
   function showChoice() {
@@ -47,15 +47,21 @@
     const view = document.getElementById('view');
     U.clear(view);
     window.scrollTo(0, 0);
-    view.appendChild(U.h('h2', {}, '🏁 Esame simulato · scegli la difficoltà'));
+    const P = RA.app.PARTS[RA.app.part];
+    view.appendChild(U.h('h2', {}, `🏁 Esame simulato · ${P.label.toLowerCase()} · scegli la difficoltà`));
     view.appendChild(U.h('p', { class: 'small' }, 'Come all\'esame: niente suggerimenti e niente correzione durante la prova. Puoi passare da un esercizio all\'altro e le risposte restano. Alla consegna (o allo scadere delle 2 ore) vedi il punteggio e la correzione di ogni esercizio.'));
     const grid = U.h('div', { class: 'cards diff-cards' });
-    [
+    (RA.app.part === 2 ? [
+      [2, 'Facile', 'una sola VLAN, grafi piccoli, RSA con numeri piccoli, niente firewall'],
+      [3, 'Medio', 'due switch, due VLAN e router come all\'esame, Dijkstra, schema PGP'],
+      [4, 'Difficile', 'ping impossibili, ARP anche nella risposta, firewall, backoff ed efficienza'],
+      [5, 'Oltre l\'esame', 'tabelle iniziali e filtering, maschere nel terzo ottetto, firma RSA, IPsec']
+    ] : [
       [2, 'Facile', 'spazio ampio, tracce brevi, niente varianti'],
       [3, 'Medio', 'come l\'esame simulato della prima parte'],
       [4, 'Difficile', 'spazio ridotto, perdite e porte da gestire, priorità SDN'],
       [5, 'Oltre l\'esame', 'casi limite: blocchi al limite, fast retransmit, doppie trappole']
-    ].forEach(([lv, name, desc]) => {
+    ]).forEach(([lv, name, desc]) => {
       grid.appendChild(U.h('div', { class: 'card diff-card' },
         U.h('h3', {}, `${name} · livello ${lv}/5`),
         U.h('p', { class: 'small' }, desc),
@@ -64,7 +70,7 @@
     if (simTraces().length) {
       grid.appendChild(U.h('div', { class: 'card diff-card pdf-card' },
         U.h('h3', {}, '📄 Il foglio del PDF'),
-        U.h('p', { class: 'small' }, 'Gli esercizi di Esame_Simulato_TESTO.pdf con gli stessi numeri: alla fine confronta anche con il file delle soluzioni.'),
+        U.h('p', { class: 'small' }, `Gli esercizi di ${P.pdf} con gli stessi numeri: alla fine confronta anche con il file delle soluzioni.`),
         U.h('button', { class: 'btn primary', text: 'Inizia l\'esame del PDF', onclick: startPdf })));
     }
     view.appendChild(grid);
@@ -155,7 +161,7 @@
     });
     const tot = U.sum(results.map(r => r.pts));
     const totMax = U.sum(results.map(r => r.max));
-    RA.storage.recordExam({ date: Date.now(), tot, totMax, label: state.label, cats: results.map(r => ({ n: r.e.mod.name, pts: r.pts, max: r.max })) });
+    RA.storage.recordExam({ date: Date.now(), part: state.part, tot, totMax, label: state.label, cats: results.map(r => ({ n: r.e.mod.name, pts: r.pts, max: r.max })) });
     // ogni esercizio finisce anche nello storico, per il ripasso
     results.forEach(r => {
       if (!r.done) return;

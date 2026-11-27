@@ -6,7 +6,7 @@
 (function () {
   const RA = window.RetiApp;
   const U = RA.util;
-  const MOD_IDS = ['vlsm', 'protocols', 'nat', 'tcp', 'sdn', 'http', 'cwnd', 'theory'];
+  const MOD_IDS = ['vlsm', 'protocols', 'nat', 'tcp', 'sdn', 'http', 'cwnd', 'theory', 'l2', 'subnet', 'dv', 'crypto', 'tls', 'mac', 'theory2'];
 
   // n esercizi per livello e per modulo
   function run(opts) {
